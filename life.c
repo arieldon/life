@@ -56,11 +56,12 @@ main(void)
     initscr();
     cbreak();
     noecho();
+    curs_set(0);
 
     char *msg = "Welcome to Conway's Game of Life! Press any key to observe.";
     mvprintw(LINES / 2, (COLS - strlen(msg)) / 2, msg);
-
     refresh();
+
     getch();
     clear();
 
