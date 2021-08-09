@@ -50,8 +50,8 @@ main(void)
     setlocale(LC_ALL, "");
     srand(time(NULL));
 
-    ssize_t delay = 1;
-    ssize_t iterations = 100;
+    size_t delay = 1;
+    size_t iterations = 100;
 
     initscr();
     cbreak();
@@ -69,7 +69,7 @@ main(void)
     refresh();
     sleep(delay);
 
-    for (ssize_t i = 0; i < iterations; ++i) {
+    for (size_t i = 0; i < iterations; ++i) {
         iter_life();
         refresh();
         sleep(delay);
