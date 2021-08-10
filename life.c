@@ -5,24 +5,24 @@
 #include <string.h>
 #include <time.h>
 
-#define CELL_ALIVE      ACS_BLOCK
+#define CELL_LIVE       ACS_BLOCK
 #define CELL_DEAD       ACS_BULLET
-#define CELL_EXPR       (rand() % 50 ? CELL_DEAD : CELL_ALIVE)
-#define CELL_EXPR_INV   (rand() % 50 ? CELL_ALIVE : CELL_DEAD)
+#define CELL_EXPR       (rand() % 50 ? CELL_DEAD : CELL_LIVE)
+#define CELL_EXPR_INV   (rand() % 50 ? CELL_LIVE : CELL_DEAD)
 
 static size_t
 count_neighbors(size_t line, size_t col)
 {
     size_t neighbors = 0;
 
-    neighbors += mvinch(line - 1, col) == CELL_ALIVE;
-    neighbors += mvinch(line - 1, col + 1) == CELL_ALIVE;
-    neighbors += mvinch(line, col + 1) == CELL_ALIVE;
-    neighbors += mvinch(line + 1, col + 1) == CELL_ALIVE;
-    neighbors += mvinch(line + 1, col) == CELL_ALIVE;
-    neighbors += mvinch(line + 1, col - 1) == CELL_ALIVE;
-    neighbors += mvinch(line, col - 1) == CELL_ALIVE;
-    neighbors += mvinch(line - 1, col - 1) == CELL_ALIVE;
+    neighbors += mvinch(line - 1, col) == CELL_LIVE;
+    neighbors += mvinch(line - 1, col + 1) == CELL_LIVE;
+    neighbors += mvinch(line, col + 1) == CELL_LIVE;
+    neighbors += mvinch(line + 1, col + 1) == CELL_LIVE;
+    neighbors += mvinch(line + 1, col) == CELL_LIVE;
+    neighbors += mvinch(line + 1, col - 1) == CELL_LIVE;
+    neighbors += mvinch(line, col - 1) == CELL_LIVE;
+    neighbors += mvinch(line - 1, col - 1) == CELL_LIVE;
 
     return neighbors;
 }
@@ -30,42 +30,42 @@ count_neighbors(size_t line, size_t col)
 static void
 init_life(void)
 {
+    size_t midline = LINES / 2;
+    size_t midcol = COLS / 2;
+
     for (;;) {
         chtype ch = CELL_EXPR;
         if (addch(ch) == ERR) {
             break;
         }
     }
+
+    mvaddch(midline + 1, midcol, CELL_LIVE);
+    mvaddch(midline + 1, midcol - 1, CELL_LIVE);
+    mvaddch(midline + 1, midcol + 1, CELL_LIVE);
+    mvaddch(midline, midcol + 1, CELL_LIVE);
+    mvaddch(midline - 1, midcol, CELL_LIVE);
 }
 
 static void
 iter_life(void)
 {
+    chtype cell_state;
+    size_t neighbors;
+
     for (ssize_t line = 0; line < LINES; ++line) {
         for (ssize_t col = 0; col < COLS; ++col) {
-            if (mvinch(line, col) == CELL_ALIVE) {
-                /* A cell on the edge can die. */
-                if (count_neighbors(line, col) < 8) {
-                    addch(CELL_EXPR_INV);
-                    if (inch() == CELL_DEAD) {
-                        continue;
-                    }
-                }
+            neighbors = count_neighbors(line, col);
+            cell_state = mvinch(line, col);
 
-                /*
-                 * mvinch() simply returns ERR if passed a position
-                 * out-of-bounds -- it doesn't crash.
-                 */
-                if (mvinch(line + 1, col) == CELL_DEAD) {
-                    addch(CELL_EXPR);
-                } else if (mvinch(line, col + 1) == CELL_DEAD) {
-                    addch(CELL_EXPR);
-                } else if (mvinch(line - 1, col) == CELL_DEAD) {
-                    addch(CELL_EXPR);
-                } else if (mvinch(line, col - 1) == CELL_DEAD) {
-                    addch(CELL_EXPR);
-                }
+            if (cell_state == CELL_DEAD && neighbors == 3) {
+                addch(CELL_LIVE);
+            } else if (cell_state == CELL_LIVE
+                    && (neighbors == 3 || neighbors == 2)) {
+                addch(CELL_LIVE);
             }
+
+            addch(CELL_DEAD);
         }
     }
 }
