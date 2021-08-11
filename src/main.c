@@ -7,58 +7,63 @@
 
 #include "matrix.h"
 
-#define CELL_LIVE           ACS_BLOCK
-#define CELL_DEAD           ACS_BULLET
-#define INBOUNDS(m, y, x)   (x < m->cols && x > 0 && y < m->rows && y > 0)
-#define NEIGHBOR(m, y, x)   (INBOUNDS(m, y, x) && m->items[y][x])
+#define CELL_LIVE ACS_BLOCK
+#define CELL_DEAD ACS_BULLET
 
 static size_t
-count_neighbors(struct matrix *m, size_t row, size_t col)
+count_neighbors(size_t row, size_t col)
 {
     size_t neighbors = 0;
 
-    neighbors += NEIGHBOR(m, row - 1, col);
-    neighbors += NEIGHBOR(m, row - 1, col + 1);
-    neighbors += NEIGHBOR(m, row, col + 1);
-    neighbors += NEIGHBOR(m, row + 1, col + 1);
-    neighbors += NEIGHBOR(m, row + 1, col);
-    neighbors += NEIGHBOR(m, row + 1, col - 1);
-    neighbors += NEIGHBOR(m, row, col - 1);
-    neighbors += NEIGHBOR(m, row - 1, col - 1);
+    neighbors += mvinch(row - 1, col) == CELL_LIVE;
+    neighbors += mvinch(row - 1, col + 1) == CELL_LIVE;
+    neighbors += mvinch(row, col + 1) == CELL_LIVE;
+    neighbors += mvinch(row + 1, col + 1) == CELL_LIVE;
+    neighbors += mvinch(row + 1, col) == CELL_LIVE;
+    neighbors += mvinch(row + 1, col - 1) == CELL_LIVE;
+    neighbors += mvinch(row, col - 1) == CELL_LIVE;
+    neighbors += mvinch(row - 1, col - 1) == CELL_LIVE;
 
     return neighbors;
 }
 
 static void
-initlife(struct matrix *current)
+initlife(struct matrix *state)
 {
     size_t centerx = COLS / 2;
     size_t centery = LINES / 2;
 
-    current->items[centery - 1][centerx] = 1;
-    current->items[centery][centerx + 1] = 1;
-    current->items[centery + 1][centerx + 1] = 1;
-    current->items[centery + 1][centerx] = 1;
-    current->items[centery + 1][centerx - 1] = 1;
+    state->items[centery - 1][centerx] = 1;
+    state->items[centery][centerx + 1] = 1;
+    state->items[centery + 1][centerx + 1] = 1;
+    state->items[centery + 1][centerx] = 1;
+    state->items[centery + 1][centerx - 1] = 1;
 }
 
 static void
-iterlife(struct matrix *current, struct matrix *next)
+iterlife(struct matrix *state)
 {
-    size_t *cell;
     size_t neighbors;
 
-    for (size_t row = 0; row < current->rows; ++row) {
-        for (size_t col = 0; col < current->cols; ++col) {
-            cell = &current->items[row][col];
-            neighbors = count_neighbors(current, row, col);
+    /* Draw current state. */
+    for (ssize_t row = 0; row < LINES; ++row) {
+        for (ssize_t col = 0; col < COLS; ++col) {
+            mvaddch(row, col, state->items[row][col] ? CELL_LIVE : CELL_DEAD);
+        }
+    }
 
-            if (!*cell && neighbors == 3) {
-                next->items[row][col] = 1;
-            } else if (*cell && (neighbors == 2 || neighbors == 3)) {
-                next->items[row][col] = 1;
+    /* Update state for next iteration. */
+    for (size_t row = 0; row < state->rows; ++row) {
+        for (size_t col = 0; col < state->cols; ++col) {
+            neighbors = count_neighbors(row, col);
+
+            if (mvinch(row, col) == CELL_DEAD && neighbors == 3) {
+                state->items[row][col] = 1;
+            } else if (mvinch(row, col) == CELL_LIVE
+                    && (neighbors == 2 || neighbors == 3)) {
+                state->items[row][col] = 1;
             } else {
-                next->items[row][col] = 0;
+                state->items[row][col] = 0;
             }
         }
     }
@@ -77,8 +82,7 @@ main(void)
 
     size_t delay = 1;
     size_t iterations = 100;
-    struct matrix *current = initmatrix(LINES, COLS);
-    struct matrix *next = initmatrix(LINES, COLS);
+    struct matrix *state = initmatrix(LINES, COLS);
 
     char *msg = "Welcome to Conway's Game of Life! Press any key to observe.";
     mvprintw(LINES / 2, (COLS - strlen(msg)) / 2, msg);
@@ -87,27 +91,15 @@ main(void)
     getch();
     clear();
 
-    initlife(current);
+    initlife(state);
     for (size_t i = 0; i < iterations; ++i) {
-        for (ssize_t line = 0; line < LINES; ++line) {
-            for (ssize_t col = 0; col < COLS; ++col) {
-                mvaddch(line, col,
-                    current->items[line][col] ? CELL_LIVE : CELL_DEAD);
-            }
-        }
-
-        iterlife(current, next);
+        iterlife(state);
         refresh();
         sleep(delay);
-
-        struct matrix **tmp = &current;
-        current = next;
-        next = *tmp;
     }
 
     endwin();
-    freematrix(current);
-    freematrix(next);
+    freematrix(state);
 
     exit(EXIT_SUCCESS);
 }
