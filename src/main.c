@@ -7,8 +7,10 @@
 
 #include "matrix.h"
 
-#define CELL_LIVE ACS_BLOCK
-#define CELL_DEAD ACS_BULLET
+#define CELL_LIVE       ACS_BLOCK
+#define CELL_DEAD       ACS_BULLET
+#define USAGE(argv0)    fprintf(stderr, "usage: %s [-d nsecs] [-i niters]\n", \
+                                argv0)
 
 static size_t
 count_neighbors(size_t row, size_t col)
@@ -70,18 +72,39 @@ iterlife(struct matrix *state)
 }
 
 int
-main(void)
+main(int argc, char *argv[])
 {
     setlocale(LC_ALL, "");
     srand(time(NULL));
+
+    int opt;
+    size_t delay = 1;
+    size_t iterations = 100;
+
+    while ((opt = getopt(argc, argv, "d:i:")) != -1) {
+        switch (opt) {
+        case 'd':
+            delay = atoi(optarg);
+            break;
+        case 'i':
+            iterations = atoi(optarg);
+            break;
+        default:
+            USAGE(argv[0]);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    if (optind < argc) {
+        USAGE(argv[0]);
+        exit(EXIT_FAILURE);
+    }
 
     initscr();
     cbreak();
     noecho();
     curs_set(0);
 
-    size_t delay = 1;
-    size_t iterations = 100;
     struct matrix *state = initmatrix(LINES, COLS);
 
     char *msg = "Welcome to Conway's Game of Life! Press any key to observe.";
