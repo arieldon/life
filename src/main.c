@@ -41,6 +41,7 @@ initlife(struct matrix *state)
             }
         }
 
+        size_t *cell;
         MEVENT event = {0};
         mousemask(BUTTON1_CLICKED, NULL);
 
@@ -48,8 +49,11 @@ initlife(struct matrix *state)
             switch (getch()) {
             case KEY_MOUSE:
                 if (getmouse(&event) == OK && event.bstate & BUTTON1_CLICKED) {
-                    state->items[event.y][event.x] = 1;
-                    mvaddch(event.y, event.x, CELL_LIVE);
+                    cell = &state->items[event.y][event.x];
+
+                    *cell = !*cell;
+                    mvaddch(event.y, event.x, *cell ? CELL_LIVE : CELL_DEAD);
+
                     refresh();
                 }
                 break;
