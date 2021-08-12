@@ -12,6 +12,8 @@
 #define USAGE(argv0)    fprintf(stderr, "usage: %s [-d nsecs] [-i niters]\n", \
                                 argv0)
 
+static int initcustom = 0;  /* Customize initial state via mouse. */
+
 static size_t
 count_neighbors(size_t row, size_t col)
 {
@@ -32,6 +34,31 @@ count_neighbors(size_t row, size_t col)
 static void
 initlife(struct matrix *state)
 {
+    if (initcustom) {
+        for (ssize_t row = 0; row < LINES; ++row) {
+            for (ssize_t col = 0; col < COLS; ++col) {
+                mvaddch(row, col, CELL_DEAD);
+            }
+        }
+
+        MEVENT event = {0};
+        mousemask(BUTTON1_CLICKED, NULL);
+
+        for (;;) {
+            switch (getch()) {
+            case KEY_MOUSE:
+                if (getmouse(&event) == OK && event.bstate & BUTTON1_CLICKED) {
+                    state->items[event.y][event.x] = 1;
+                    mvaddch(event.y, event.x, CELL_LIVE);
+                    refresh();
+                }
+                break;
+            default:
+                return;
+            }
+        }
+    }
+
     size_t centerx = COLS / 2;
     size_t centery = LINES / 2;
 
@@ -71,6 +98,14 @@ iterlife(struct matrix *state)
     }
 }
 
+static void
+notify(char *msg)
+{
+    mvprintw(LINES / 2, (COLS - strlen(msg)) / 2, msg);
+    getch();
+    clear();
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -81,8 +116,11 @@ main(int argc, char *argv[])
     size_t delay = 1;
     size_t iterations = 100;
 
-    while ((opt = getopt(argc, argv, "d:i:")) != -1) {
+    while ((opt = getopt(argc, argv, "cd:i:")) != -1) {
         switch (opt) {
+        case 'c':
+            initcustom = 1;
+            break;
         case 'd':
             delay = atoi(optarg);
             break;
@@ -103,16 +141,15 @@ main(int argc, char *argv[])
     initscr();
     cbreak();
     noecho();
+    keypad(stdscr, TRUE);
     curs_set(0);
 
     struct matrix *state = initmatrix(LINES, COLS);
 
-    char *msg = "Welcome to Conway's Game of Life! Press any key to observe.";
-    mvprintw(LINES / 2, (COLS - strlen(msg)) / 2, msg);
-    refresh();
-
-    getch();
-    clear();
+    notify("Welcome to Conway's game of Life! Press any key to continue.");
+    if (initcustom) {
+        notify("To customize the intial state, toggle cells with a click.");
+    }
 
     initlife(state);
     for (size_t i = 0; i < iterations; ++i) {
