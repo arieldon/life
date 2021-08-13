@@ -5,8 +5,6 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "matrix.h"
-
 #define CELL_LIVE       ACS_BLOCK
 #define CELL_DEAD       ACS_BULLET
 #define USAGE(argv0)    fprintf(stderr, "usage: %s [-d nsecs] [-i niters]\n", \
@@ -19,29 +17,29 @@ count_neighbors(size_t row, size_t col)
 {
     size_t neighbors = 0;
 
-    neighbors += mvinch(row - 1, col) == CELL_LIVE;
-    neighbors += mvinch(row - 1, col + 1) == CELL_LIVE;
-    neighbors += mvinch(row, col + 1) == CELL_LIVE;
-    neighbors += mvinch(row + 1, col + 1) == CELL_LIVE;
-    neighbors += mvinch(row + 1, col) == CELL_LIVE;
-    neighbors += mvinch(row + 1, col - 1) == CELL_LIVE;
-    neighbors += mvinch(row, col - 1) == CELL_LIVE;
-    neighbors += mvinch(row - 1, col - 1) == CELL_LIVE;
+    neighbors += mvwinch(curscr, row - 1, col) == CELL_LIVE;
+    neighbors += mvwinch(curscr, row - 1, col + 1) == CELL_LIVE;
+    neighbors += mvwinch(curscr, row, col + 1) == CELL_LIVE;
+    neighbors += mvwinch(curscr, row + 1, col + 1) == CELL_LIVE;
+    neighbors += mvwinch(curscr, row + 1, col) == CELL_LIVE;
+    neighbors += mvwinch(curscr, row + 1, col - 1) == CELL_LIVE;
+    neighbors += mvwinch(curscr, row, col - 1) == CELL_LIVE;
+    neighbors += mvwinch(curscr, row - 1, col - 1) == CELL_LIVE;
 
     return neighbors;
 }
 
 static void
-initlife(struct matrix *state)
+initlife()
 {
-    if (initcustom) {
-        for (ssize_t row = 0; row < LINES; ++row) {
-            for (ssize_t col = 0; col < COLS; ++col) {
-                mvaddch(row, col, CELL_DEAD);
-            }
+    for (ssize_t row = 0; row < LINES; ++row) {
+        for (ssize_t col = 0; col < COLS; ++col) {
+            mvaddch(row, col, CELL_DEAD);
         }
+    }
+    refresh();
 
-        size_t *cell;
+    if (initcustom) {
         MEVENT event = {0};
         mousemask(BUTTON1_CLICKED, NULL);
 
@@ -49,11 +47,11 @@ initlife(struct matrix *state)
             switch (getch()) {
             case KEY_MOUSE:
                 if (getmouse(&event) == OK && event.bstate & BUTTON1_CLICKED) {
-                    cell = &state->items[event.y][event.x];
-
-                    *cell = !*cell;
-                    mvaddch(event.y, event.x, *cell ? CELL_LIVE : CELL_DEAD);
-
+                    if (mvinch(event.y, event.x) == CELL_DEAD) {
+                        addch(CELL_LIVE);
+                    } else {
+                        addch(CELL_DEAD);
+                    }
                     refresh();
                 }
                 break;
@@ -66,37 +64,31 @@ initlife(struct matrix *state)
     size_t centerx = COLS / 2;
     size_t centery = LINES / 2;
 
-    state->items[centery - 1][centerx] = 1;
-    state->items[centery][centerx + 1] = 1;
-    state->items[centery + 1][centerx + 1] = 1;
-    state->items[centery + 1][centerx] = 1;
-    state->items[centery + 1][centerx - 1] = 1;
+    mvwaddch(newscr, centery - 1, centerx, CELL_LIVE);
+    mvwaddch(newscr, centery, centerx + 1, CELL_LIVE);
+    mvwaddch(newscr, centery + 1, centerx + 1, CELL_LIVE);
+    mvwaddch(newscr, centery + 1, centerx, CELL_LIVE);
+    mvwaddch(newscr, centery + 1, centerx - 1, CELL_LIVE);
+
+    refresh();
 }
 
 static void
-iterlife(struct matrix *state)
+iterlife()
 {
     size_t neighbors;
 
-    /* Draw current state. */
     for (ssize_t row = 0; row < LINES; ++row) {
         for (ssize_t col = 0; col < COLS; ++col) {
-            mvaddch(row, col, state->items[row][col] ? CELL_LIVE : CELL_DEAD);
-        }
-    }
-
-    /* Update state for next iteration. */
-    for (size_t row = 0; row < state->rows; ++row) {
-        for (size_t col = 0; col < state->cols; ++col) {
             neighbors = count_neighbors(row, col);
 
-            if (mvinch(row, col) == CELL_DEAD && neighbors == 3) {
-                state->items[row][col] = 1;
-            } else if (mvinch(row, col) == CELL_LIVE
+            if (mvwinch(curscr, row, col) == CELL_DEAD && neighbors == 3) {
+                mvwaddch(newscr, row, col, CELL_LIVE);
+            } else if (mvwinch(curscr, row, col) == CELL_LIVE
                     && (neighbors == 2 || neighbors == 3)) {
-                state->items[row][col] = 1;
+                mvwaddch(newscr, row, col, CELL_LIVE);
             } else {
-                state->items[row][col] = 0;
+                mvwaddch(newscr, row, col, CELL_DEAD);
             }
         }
     }
@@ -148,22 +140,18 @@ main(int argc, char *argv[])
     keypad(stdscr, TRUE);
     curs_set(0);
 
-    struct matrix *state = initmatrix(LINES, COLS);
-
     notify("Welcome to Conway's game of Life! Press any key to continue.");
     if (initcustom) {
         notify("To customize the intial state, toggle cells with a click.");
     }
 
-    initlife(state);
+    initlife();
     for (size_t i = 0; i < iterations; ++i) {
-        iterlife(state);
-        refresh();
+        iterlife();
         sleep(delay);
+        refresh();
     }
 
     endwin();
-    freematrix(state);
-
     exit(EXIT_SUCCESS);
 }
