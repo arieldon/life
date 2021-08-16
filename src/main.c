@@ -7,7 +7,8 @@
 
 #define CELL_LIVE       ACS_BLOCK
 #define CELL_DEAD       ACS_BULLET
-#define USAGE(argv0)    fprintf(stderr, "usage: %s [-d nsecs] [-i niters]\n", \
+#define USAGE(argv0)    fprintf(stderr, "usage: %s " \
+                                "[-c] [-d nsecs] [-i niters]\n", \
                                 argv0)
 
 static int initcustom = 0;  /* Customize initial state via mouse. */
@@ -17,6 +18,10 @@ count_neighbors(size_t row, size_t col)
 {
     size_t neighbors = 0;
 
+    /*
+     * mvwinch simply returns ERR if passed a position out-of-bounds -- no
+     * segmentation fault here.
+     */
     neighbors += mvwinch(curscr, row - 1, col) == CELL_LIVE;
     neighbors += mvwinch(curscr, row - 1, col + 1) == CELL_LIVE;
     neighbors += mvwinch(curscr, row, col + 1) == CELL_LIVE;
@@ -120,6 +125,9 @@ main(int argc, char *argv[])
         case 'd':
             delay = atoi(optarg);
             break;
+        case 'h':
+            USAGE(argv[0]);
+            exit(EXIT_SUCCESS);
         case 'i':
             iterations = atoi(optarg);
             break;
