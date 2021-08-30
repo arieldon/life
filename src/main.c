@@ -115,7 +115,7 @@ main(int argc, char *argv[])
     size_t delay = 1;
     size_t iterations = 100;
 
-    while ((opt = getopt(argc, argv, "cd:i:")) != -1) {
+    while ((opt = getopt(argc, argv, "cd:hi:")) != -1) {
         switch (opt) {
         case 'c':
             initcustom = 1;
