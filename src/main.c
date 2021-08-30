@@ -2,7 +2,6 @@
 #include <ncurses.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include <unistd.h>
 
 #define CELL_LIVE       ACS_BLOCK
@@ -111,7 +110,6 @@ int
 main(int argc, char *argv[])
 {
     setlocale(LC_ALL, "");
-    srand(time(NULL));
 
     int opt;
     size_t delay = 1;
